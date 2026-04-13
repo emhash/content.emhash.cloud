@@ -1,0 +1,688 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ action }} Content — EduContent{% endblock %}
+
+{% block extra_head %}
+  {{ form.media }}
+  {{ formset.media }}
+{% endblock extra_head %}
+
+{% block content %}
+<div class="container-fluid">
+
+  <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+    <div>
+      <h1 class="h3 fw-bold mb-0">{{ action }} Content</h1>
+      {% if content %}
+        <p class="text-muted small mb-0">Editing: {{ content.title }}</p>
+      {% endif %}
+    </div>
+    <div class="d-flex gap-2">
+      {% if content %}
+        <a href="{% url 'content:content-detail' slug=content.slug %}" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-eye me-1"></i>Preview
+        </a>
+      {% endif %}
+      <a href="{% url 'content:dashboard' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i>Dashboard
+      </a>
+    </div>
+  </div>
+
+  <form method="post" enctype="multipart/form-data" id="contentForm" novalidate>
+    {% csrf_token %}
+
+    {% if form.errors or formset.non_form_errors or formset.errors %}
+      <div class="alert alert-danger">
+        <strong>Could not save.</strong> Please fix the following errors:
+        <ul class="mb-0 mt-2">
+          {% for error in form.non_field_errors %}
+            <li>{{ error }}</li>
+          {% endfor %}
+          {% for field in form %}
+            {% for error in field.errors %}
+              <li>{{ field.label }}: {{ error }}</li>
+            {% endfor %}
+          {% endfor %}
+          {% for error in formset.non_form_errors %}
+            <li>{{ error }}</li>
+          {% endfor %}
+          {% for section_form in formset %}
+            {% for error in section_form.non_field_errors %}
+              <li>Section {{ forloop.counter }}: {{ error }}</li>
+            {% endfor %}
+            {% for field in section_form.visible_fields %}
+              {% for error in field.errors %}
+                <li>Section {{ forloop.parentloop.counter }} - {{ field.label }}: {{ error }}</li>
+              {% endfor %}
+            {% endfor %}
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+
+    <div class="row g-4">
+
+      <div class="col-lg-8">
+
+        {% if form.non_field_errors %}
+          <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+        {% endif %}
+
+        <div class="card border-0 shadow-sm mb-4">
+          <div class="card-header bg-primary text-white fw-semibold">
+            <i class="bi bi-type me-2"></i>Content Information
+          </div>
+          <div class="card-body">
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Title <span class="text-danger">*</span></label>
+              {{ form.title }}
+              {% if form.title.errors %}
+                <div class="invalid-feedback d-block">{{ form.title.errors.0 }}</div>
+              {% endif %}
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Excerpt</label>
+              {{ form.excerpt }}
+              <div class="form-text">Short description shown in listing cards and search results.</div>
+            </div>
+
+          </div>
+        </div>
+
+        {{ formset.management_form }}
+
+        <div id="section-container">
+          {% for section_form in formset %}
+            <div class="card border-0 shadow-sm mb-4 section-form-card" data-index="{{ forloop.counter0 }}">
+              <div class="card-header d-flex align-items-center justify-content-between
+                          bg-dark bg-opacity-75 text-white">
+
+                <div class="d-flex align-items-center gap-2">
+                  <i class="bi bi-grip-vertical" style="cursor:grab;opacity:.6;"></i>
+                  <span class="fw-semibold section-header-label">
+                    Section {% if section_form.instance.pk %}{{ section_form.instance.title }}{% else %}{{ forloop.counter }}{% endif %}
+                  </span>
+                </div>
+
+                <div class="d-flex align-items-center gap-2">
+                  <div class="form-check form-switch mb-0">
+                    {{ section_form.DELETE }}
+                    <label class="form-check-label text-white small" for="{{ section_form.DELETE.id_for_label }}">
+                      Remove
+                    </label>
+                  </div>
+                  <button type="button" class="btn btn-sm btn-outline-light toggle-section"
+                          title="Toggle section">
+                    <i class="bi bi-chevron-up"></i>
+                  </button>
+                </div>
+
+              </div>
+
+              <div class="card-body section-body">
+
+                {{ section_form.id }}
+
+                <div class="row g-3 mb-3">
+                  <div class="col-md-7">
+                    <label class="form-label fw-semibold">Section Title <span class="text-danger">*</span></label>
+                    {{ section_form.title }}
+                    {% if section_form.title.errors %}
+                      <div class="invalid-feedback d-block">{{ section_form.title.errors.0 }}</div>
+                    {% endif %}
+                  </div>
+                  <div class="col-md-3">
+                    <label class="form-label fw-semibold">Position</label>
+                    {{ section_form.position }}
+                  </div>
+                  <div class="col-md-2">
+                    <label class="form-label fw-semibold">Order</label>
+                    {{ section_form.order }}
+                  </div>
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label fw-semibold">Body (TinyMCE)</label>
+                  {{ section_form.body }}
+                  {% if section_form.body.errors %}
+                    <div class="invalid-feedback d-block">{{ section_form.body.errors.0 }}</div>
+                  {% endif %}
+                </div>
+
+                {% if section_form.position.errors or section_form.order.errors %}
+                  <div class="mb-3">
+                    {% if section_form.position.errors %}
+                      <div class="invalid-feedback d-block">Position: {{ section_form.position.errors.0 }}</div>
+                    {% endif %}
+                    {% if section_form.order.errors %}
+                      <div class="invalid-feedback d-block">Order: {{ section_form.order.errors.0 }}</div>
+                    {% endif %}
+                  </div>
+                {% endif %}
+
+                <div class="d-flex gap-4">
+                  <div class="form-check">
+                    {{ section_form.is_open_by_default }}
+                    <label class="form-check-label small" for="{{ section_form.is_open_by_default.id_for_label }}">
+                      Open by default (right accordion)
+                    </label>
+                  </div>
+                  <div class="form-check">
+                    {{ section_form.is_active }}
+                    <label class="form-check-label small" for="{{ section_form.is_active.id_for_label }}">
+                      Active
+                    </label>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+
+        <button type="button" id="add-section-btn" class="btn btn-outline-primary w-100 mb-4">
+          <i class="bi bi-plus-lg me-2"></i>Add Another Section
+        </button>
+
+        {% if content %}
+          <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-success bg-opacity-75 text-white fw-semibold d-flex align-items-center justify-content-between">
+              <span><i class="bi bi-collection-play me-2"></i>Media Library</span>
+              <button type="button" class="btn btn-sm btn-outline-light" data-bs-toggle="modal"
+                      data-bs-target="#uploadMediaModal">
+                <i class="bi bi-upload me-1"></i>Upload
+              </button>
+            </div>
+            <div class="card-body" id="mediaListContainer">
+              <div class="text-center text-muted py-3 small" id="mediaLoading">
+                <div class="spinner-border spinner-border-sm me-2"></div>Loading media…
+              </div>
+              <div id="mediaGrid" class="row g-2 d-none"></div>
+            </div>
+          </div>
+        {% else %}
+          <div class="alert alert-info small">
+            <i class="bi bi-info-circle me-2"></i>
+            Save the content first, then come back to upload media files.
+            You can then use the <strong>Insert Inline Tag</strong> button in TinyMCE to embed them inside sections.
+          </div>
+        {% endif %}
+
+      </div>
+
+
+      <div class="col-lg-4">
+        <div class="sticky-top" style="top: 80px;">
+
+          <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header fw-semibold">
+              <i class="bi bi-send me-2 text-primary"></i>Publish Settings
+            </div>
+            <div class="card-body">
+
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Status</label>
+                {{ form.status }}
+                {% if form.status.errors %}
+                  <div class="invalid-feedback d-block">{{ form.status.errors.0 }}</div>
+                {% endif %}
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Publish Date</label>
+                {{ form.published_at }}
+                <div class="form-text">Leave blank to auto-set when publishing.</div>
+                {% if form.published_at.errors %}
+                  <div class="invalid-feedback d-block">{{ form.published_at.errors.0 }}</div>
+                {% endif %}
+              </div>
+
+              <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-primary">
+                  <i class="bi bi-floppy me-2"></i>Save Content
+                </button>
+                <a href="{% url 'content:dashboard' %}" class="btn btn-outline-secondary">
+                  Cancel
+                </a>
+              </div>
+
+            </div>
+          </div>
+
+          <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header fw-semibold">
+              <i class="bi bi-diagram-3 me-2 text-success"></i>Category
+            </div>
+            <div class="card-body">
+
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Category <span class="text-danger">*</span></label>
+                {{ form.category }}
+                {% if form.category.errors %}
+                  <div class="invalid-feedback d-block">{{ form.category.errors.0 }}</div>
+                {% endif %}
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Sub Category <span class="text-danger">*</span></label>
+                {{ form.sub_category }}
+                {% if form.sub_category.errors %}
+                  <div class="invalid-feedback d-block">{{ form.sub_category.errors.0 }}</div>
+                {% endif %}
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Sub-Sub Category <span class="text-danger">*</span></label>
+                {{ form.sub_sub_category }}
+                {% if form.sub_sub_category.errors %}
+                  <div class="invalid-feedback d-block">{{ form.sub_sub_category.errors.0 }}</div>
+                {% endif %}
+              </div>
+
+            </div>
+          </div>
+
+          <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header fw-semibold">
+              <i class="bi bi-image me-2 text-warning"></i>Thumbnail
+            </div>
+            <div class="card-body">
+              {% if content.thumbnail %}
+                <img src="{{ content.thumbnail.url }}" class="img-fluid rounded mb-3" alt="Current thumbnail">
+              {% endif %}
+              {{ form.thumbnail }}
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </form>
+
+</div>
+
+{% if content %}
+<div class="modal fade" id="uploadMediaModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-upload me-2"></i>Upload Media</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Title <span class="text-danger">*</span></label>
+          <input type="text" id="mediaTitle" class="form-control" placeholder="e.g. Lecture Audio 1">
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Type <span class="text-danger">*</span></label>
+          <select id="mediaType" class="form-select">
+            <option value="image">Image</option>
+            <option value="audio">Audio</option>
+            <option value="video">Video</option>
+            <option value="youtube">YouTube</option>
+            <option value="iframe">iFrame / Embed</option>
+          </select>
+        </div>
+        <div id="fileRow" class="mb-3">
+          <label class="form-label fw-semibold">File</label>
+          <input type="file" id="mediaFile" class="form-control">
+        </div>
+        <div id="urlRow" class="mb-3 d-none">
+          <label class="form-label fw-semibold">URL</label>
+          <input type="url" id="mediaUrl" class="form-control" placeholder="https://…">
+        </div>
+        <div id="mediaUploadAlert" class="alert d-none small mb-0"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" id="uploadMediaBtn" class="btn btn-success">
+          <i class="bi bi-upload me-1"></i>Upload
+        </button>
+      </div>
+    </div>
+  </div>
+  </div>
+  {% endif %}
+
+  <script>
+const catSelect = document.getElementById('id_category');
+const subSelect = document.getElementById('id_sub_category');
+const subSubSelect = document.getElementById('id_sub_sub_category');
+
+  if (catSelect && subSelect && subSubSelect) {
+
+function resetSelect(el, placeholder) {
+  el.innerHTML = `<option value="">${placeholder}</option>`;
+  el.disabled  = true;
+}
+
+catSelect.addEventListener('change', function () {
+  resetSelect(subSelect, '— pick sub category —');
+  resetSelect(subSubSelect, '— pick sub-sub category —');
+  if (!this.value) return;
+  fetch(`/ajax/subcategories/?category_id=${this.value}`)
+    .then(r => r.json())
+    .then(data => {
+      subSelect.disabled = false;
+      data.forEach(s => {
+        subSelect.insertAdjacentHTML('beforeend', `<option value="${s.id}">${s.name}</option>`);
+      });
+    });
+});
+
+subSelect.addEventListener('change', function () {
+  resetSelect(subSubSelect, '— pick sub-sub category —');
+  if (!this.value) return;
+  fetch(`/ajax/subsubcategories/?sub_category_id=${this.value}`)
+    .then(r => r.json())
+    .then(data => {
+      subSubSelect.disabled = false;
+      data.forEach(s => {
+        subSubSelect.insertAdjacentHTML('beforeend', `<option value="${s.id}">${s.name}</option>`);
+      });
+    });
+});
+
+}
+</script>
+
+
+<script>
+const totalForms = document.querySelector('#contentForm input[name$="-TOTAL_FORMS"]');
+const container = document.getElementById('section-container');
+const addSectionBtn = document.getElementById('add-section-btn');
+
+if (totalForms && container && addSectionBtn) {
+  const prefix = totalForms.name.replace('-TOTAL_FORMS', '');
+
+  addSectionBtn.addEventListener('click', function () {
+    const idx = parseInt(totalForms.value, 10);
+    const source = container.querySelector('.section-form-card');
+    if (!source) return;
+
+    const clone = source.cloneNode(true);
+    const regex = new RegExp(`${prefix}-(\\d+|__prefix__)-`, 'g');
+
+    clone.querySelectorAll('[name],[id],[for]').forEach(el => {
+      ['name', 'id', 'for'].forEach(attr => {
+        const current = el.getAttribute(attr);
+        if (current) {
+          el.setAttribute(attr, current.replace(regex, `${prefix}-${idx}-`));
+        }
+      });
+    });
+
+    clone.querySelectorAll('input, textarea, select').forEach(el => {
+      if (el.name && el.name.endsWith('-id')) {
+        el.value = '';
+        return;
+      }
+      if (el.name && el.name.endsWith('-DELETE')) {
+        el.checked = false;
+        return;
+      }
+      if (el.type === 'checkbox') {
+        el.checked = false;
+      } else {
+        el.value = '';
+      }
+    });
+
+    const activeCheckbox = clone.querySelector('input[name$="-is_active"]');
+    if (activeCheckbox) {
+      activeCheckbox.checked = true;
+    }
+
+    const label = clone.querySelector('.section-header-label');
+    if (label) {
+      label.textContent = `Section ${idx + 1}`;
+    }
+
+    container.appendChild(clone);
+    totalForms.value = idx + 1;
+  });
+}
+
+document.addEventListener('click', function (e) {
+  const btn = e.target.closest('.toggle-section');
+  if (!btn) return;
+  const body = btn.closest('.section-form-card').querySelector('.section-body');
+  const icon = btn.querySelector('i');
+  body.style.display = body.style.display === 'none' ? '' : 'none';
+  icon.classList.toggle('bi-chevron-up');
+  icon.classList.toggle('bi-chevron-down');
+});
+
+{% if content %}
+const mediaTypeSelect = document.getElementById('mediaType');
+const fileRow = document.getElementById('fileRow');
+const urlRow = document.getElementById('urlRow');
+const mediaCache = {};
+
+mediaTypeSelect.addEventListener('change', function () {
+  const needsUrl = ['youtube', 'iframe'].includes(this.value);
+  fileRow.classList.toggle('d-none', needsUrl);
+  urlRow.classList.toggle('d-none', !needsUrl);
+});
+
+const CONTENT_ID = {{ content.pk }};
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text || '';
+  return div.innerHTML;
+}
+
+function getEditor() {
+  if (!window.tinymce) return null;
+  if (window.tinymce.activeEditor) return window.tinymce.activeEditor;
+  if (window.tinymce.editors && window.tinymce.editors.length > 0) return window.tinymce.editors[0];
+  return null;
+}
+
+function toYouTubeEmbed(url) {
+  if (!url) return '';
+  const regExp = /(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([^&?/]+)/;
+  const match = url.match(regExp);
+  return match ? `https://www.youtube.com/embed/${match[1]}` : url;
+}
+
+function buildEmbedHtml(media) {
+  const safeTitle = escapeHtml(media.title || 'Media');
+  const url = media.url || '';
+
+  if (media.type === 'image') {
+    return `<img src="${url}" alt="${safeTitle}" class="img-fluid rounded my-2">`;
+  }
+  if (media.type === 'audio') {
+    return `<audio controls class="w-100 my-2"><source src="${url}"></audio>`;
+  }
+  if (media.type === 'video') {
+    return `<video controls class="w-100 rounded my-2"><source src="${url}"></video>`;
+  }
+  if (media.type === 'youtube') {
+    const embed = toYouTubeEmbed(url);
+    return `<div class="ratio ratio-16x9 my-2"><iframe src="${embed}" allowfullscreen></iframe></div>`;
+  }
+  if (media.type === 'iframe') {
+    return `<div class="ratio ratio-16x9 my-2"><iframe src="${url}" allowfullscreen></iframe></div>`;
+  }
+  return '';
+}
+
+async function insertInlineTag(media) {
+  const editor = getEditor();
+  if (!editor) {
+    alert('Click inside a details editor first.');
+    return;
+  }
+
+  const safeLabel = escapeHtml(media.title || 'Open Media');
+  editor.insertContent(
+    ` <span class="inline-tag" data-type="${media.type}" data-url="${media.url || ''}" data-title="${safeLabel}">${safeLabel} 🔍</span> `
+  );
+}
+
+function insertEmbedded(media) {
+  const editor = getEditor();
+  if (!editor) {
+    alert('Click inside a details editor first.');
+    return;
+  }
+
+  const html = buildEmbedHtml(media);
+  if (!html) {
+    alert('Unsupported media type for embed.');
+    return;
+  }
+  editor.insertContent(html);
+}
+
+document.getElementById('uploadMediaBtn').addEventListener('click', async function () {
+  const title = document.getElementById('mediaTitle').value.trim();
+  const type = document.getElementById('mediaType').value;
+  const alert = document.getElementById('mediaUploadAlert');
+
+  if (!title) {
+    alert.className = 'alert alert-warning small';
+    alert.textContent = 'Please enter a title.';
+    return;
+  }
+
+  const fd = new FormData();
+  fd.append('title', title);
+  fd.append('type', type);
+
+  const needsUrl = ['youtube', 'iframe'].includes(type);
+  if (needsUrl) {
+    const url = document.getElementById('mediaUrl').value.trim();
+    if (!url) {
+      alert.className = 'alert alert-warning small';
+      alert.textContent = 'Please enter a URL.';
+      return;
+    }
+    fd.append('url', url);
+  } else {
+    const file = document.getElementById('mediaFile').files[0];
+    if (file) fd.append('file', file);
+  }
+
+  this.disabled = true;
+  this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Uploading…';
+
+  const res = await fetch(`/api/content/${CONTENT_ID}/media/upload/`, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value },
+    body: fd,
+  });
+  const data = await res.json();
+
+  this.disabled = false;
+  this.innerHTML = '<i class="bi bi-upload me-1"></i>Upload';
+
+  if (data.success) {
+    alert.className = 'alert alert-success small';
+    alert.textContent = `"${data.media.title}" uploaded successfully.`;
+    loadMediaList();
+    setTimeout(() => {
+      bootstrap.Modal.getInstance(document.getElementById('uploadMediaModal')).hide();
+      alert.className = 'alert d-none';
+    }, 1500);
+  } else {
+    alert.className = 'alert alert-danger small';
+    alert.textContent = JSON.stringify(data.errors);
+  }
+});
+
+async function loadMediaList() {
+  const grid = document.getElementById('mediaGrid');
+  const loading = document.getElementById('mediaLoading');
+  loading.classList.remove('d-none');
+  grid.classList.add('d-none');
+
+  const res = await fetch(`/api/content/${CONTENT_ID}/media/`);
+  const data = await res.json();
+  grid.innerHTML = '';
+
+  const TYPE_ICONS = {
+    image: 'bi-image text-warning',
+    audio: 'bi-volume-up text-info',
+    video: 'bi-camera-video text-danger',
+    youtube: 'bi-youtube text-danger',
+    iframe: 'bi-window text-primary',
+  };
+
+  if (data.media.length === 0) {
+    grid.innerHTML = '<div class="col-12 text-muted small text-center py-2">No media uploaded yet.</div>';
+  } else {
+    data.media.forEach(m => {
+      mediaCache[m.id] = m;
+      const icon = TYPE_ICONS[m.type] || 'bi-file';
+      grid.insertAdjacentHTML('beforeend', `
+        <div class="col-6 col-md-4" id="media-${m.id}">
+          <div class="card border rounded h-100 p-2 text-center small">
+            ${m.thumbnail
+              ? `<img src="${m.thumbnail}" class="rounded mb-1" style="height:50px;object-fit:cover;">`
+              : `<i class="bi ${icon} mb-1" style="font-size:1.8rem;"></i>`}
+            <div class="text-truncate fw-semibold" title="${m.title}">${m.title}</div>
+            <div class="badge bg-secondary bg-opacity-10 text-secondary mb-1">${m.type}</div>
+            <button type="button" class="btn btn-sm btn-outline-primary w-100 mb-1 insert-embed-btn" data-media-id="${m.id}">
+              Insert Embedded
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-info w-100 mb-1 insert-inline-btn" data-media-id="${m.id}">
+              Insert Clickable Title
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-danger w-100 mt-1 delete-media-btn"
+                    data-media-id="${m.id}">
+              <i class="bi bi-trash"></i>
+            </button>
+          </div>
+        </div>
+      `);
+    });
+  }
+
+  loading.classList.add('d-none');
+  grid.classList.remove('d-none');
+}
+
+document.getElementById('mediaGrid').addEventListener('click', async function (e) {
+  const embedBtn = e.target.closest('.insert-embed-btn');
+  if (embedBtn) {
+    const media = mediaCache[embedBtn.dataset.mediaId];
+    if (media) insertEmbedded(media);
+    return;
+  }
+
+  const inlineBtn = e.target.closest('.insert-inline-btn');
+  if (inlineBtn) {
+    const media = mediaCache[inlineBtn.dataset.mediaId];
+    if (media) await insertInlineTag(media);
+    return;
+  }
+
+  const btn = e.target.closest('.delete-media-btn');
+  if (!btn) return;
+  if (!confirm('Delete this media item?')) return;
+  const mediaId = btn.dataset.mediaId;
+  const res = await fetch(`/api/content/${CONTENT_ID}/media/${mediaId}/delete/`, {
+    method: 'DELETE',
+    headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value },
+  });
+  const data = await res.json();
+  if (data.success) {
+    document.getElementById(`media-${mediaId}`)?.remove();
+  }
+});
+
+loadMediaList();
+{% endif %}
+</script>
+
+{% endblock content %}

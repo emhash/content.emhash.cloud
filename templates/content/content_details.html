@@ -1,0 +1,467 @@
+{% extends "base.html" %}
+
+{% block title %}{{ content.title }} — EduContent{% endblock %}
+
+{% block extra_head %}
+  {% if content.excerpt %}
+    <meta name="description" content="{{ content.excerpt }}">
+  {% endif %}
+  <style>
+    body { background-color: #f8f9fa; }
+
+    .sidebar-sticky {
+      position: sticky;
+      top: 80px;
+      max-height: calc(100vh - 100px);
+      overflow-y: auto;
+    }
+
+    .inline-tag {
+      display: inline-block;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.82rem;
+      padding: 2px 8px;
+      margin: 0 4px 4px 0;
+      border-radius: 4px;
+      border: 1px solid transparent;
+      transition: opacity .15s;
+      text-decoration: none;
+      white-space: nowrap;
+      vertical-align: baseline;
+    }
+    .inline-tag:hover { opacity: .8; }
+
+    .inline-tag[data-type="image"]   { background:#fff3cd; color:#856404; border-color:#ffe08a; }
+    .inline-tag[data-type="audio"]   { background:#cff4fc; color:#055160; border-color:#9eeaf9; }
+    .inline-tag[data-type="video"]   { background:#f8d7da; color:#842029; border-color:#f5c2c7; }
+    .inline-tag[data-type="youtube"] { background:#f8d7da; color:#842029; border-color:#f5c2c7; }
+    .inline-tag[data-type="iframe"]  { background:#d1ecf1; color:#0c5460; border-color:#b8daff; }
+    .inline-tag[data-type="text"]    { background:#d1e7dd; color:#0f5132; border-color:#a3cfbb; }
+
+    .content-body { font-size: 0.95rem; line-height: 1.8; }
+    .content-body p { margin-bottom: 0.75rem; }
+
+    .modal-audio-player { width: 100%; }
+    .modal-video-player { width: 100%; border-radius: 6px; }
+    .modal-iframe       { width: 100%; height: 420px; border: none; border-radius: 6px; }
+
+    .section-card .card-header { font-weight: 700; font-size: 1rem; }
+
+    .accordion-button { font-weight: 600; }
+
+    .draft-banner {
+      background: repeating-linear-gradient(
+        45deg, #fff3cd, #fff3cd 10px, #fffde7 10px, #fffde7 20px
+      );
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+
+{% if content.status != 'published' %}
+  <div class="draft-banner border-bottom border-warning py-2 mb-0 text-center small fw-semibold text-warning-emphasis">
+    <i class="bi bi-eye-slash me-2"></i>
+    You are previewing a <strong>{{ content.get_status_display }}</strong> content.
+    It is not visible to the public.
+    {% if user.is_authenticated %}
+      <a href="{% url 'content:content-edit' slug=content.slug %}" class="ms-3 btn btn-sm btn-warning">
+        <i class="bi bi-pencil me-1"></i>Edit
+      </a>
+    {% endif %}
+  </div>
+{% endif %}
+
+<div class="bg-white border-bottom shadow-sm py-3 mb-0">
+  <div class="container">
+
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb mb-1 small">
+        <li class="breadcrumb-item">
+          <a href="{% url 'content:home' %}" class="text-decoration-none">Home</a>
+        </li>
+        <li class="breadcrumb-item">
+          <a href="{% url 'content:home' %}?category={{ content.sub_sub_category.sub_category.category.slug }}" class="text-decoration-none">
+            {{ content.sub_sub_category.sub_category.category.name }}
+          </a>
+        </li>
+        <li class="breadcrumb-item">{{ content.sub_sub_category.sub_category.name }}</li>
+        <li class="breadcrumb-item">{{ content.sub_sub_category.name }}</li>
+        <li class="breadcrumb-item active">{{ content.title }}</li>
+      </ol>
+    </nav>
+
+    <div class="d-flex align-items-start align-items-md-center justify-content-between flex-column flex-md-row gap-2">
+      <div>
+        <h1 class="h3 fw-bold mb-0">{{ content.title }}</h1>
+        <div class="text-muted small mt-1">
+          {% if content.published_at %}
+            <i class="bi bi-calendar3 me-1"></i>
+            Published: {{ content.published_at|date:"d M Y" }}
+            &nbsp;·&nbsp;
+          {% endif %}
+          {% if content.created_by %}
+            <i class="bi bi-person me-1"></i>
+            {{ content.created_by.get_full_name|default:content.created_by.username }}
+            &nbsp;·&nbsp;
+          {% endif %}
+          <span class="badge
+            {% if content.status == 'published' %}bg-success
+            {% elif content.status == 'draft' %}bg-warning text-dark
+            {% else %}bg-secondary{% endif %}">
+            {{ content.get_status_display }}
+          </span>
+        </div>
+      </div>
+
+      <div class="d-flex gap-2 flex-shrink-0">
+        {% if user.is_authenticated and content.created_by == user or user.is_staff %}
+          <a href="{% url 'content:content-edit' slug=content.slug %}" class="btn btn-sm btn-outline-primary">
+            <i class="bi bi-pencil me-1"></i>Edit
+          </a>
+        {% endif %}
+        <a href="javascript:history.back()" class="btn btn-sm btn-outline-secondary">
+          <i class="bi bi-arrow-left me-1"></i>Back
+        </a>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<div class="container py-4">
+  <div class="row g-4">
+
+    <div class="col-lg-8">
+
+      {% for section in left_sections %}
+        <div class="card shadow-sm mb-4" style="border-top: 3px solid #0d6efd;">
+          <div class="card-header bg-primary text-white d-flex align-items-center gap-2">
+            <i class="bi bi-journal-text"></i>
+            {{ section.title }}
+          </div>
+          <div class="card-body content-body">
+            {{ section.body|safe }}
+          </div>
+        </div>
+      {% empty %}
+        <div class="text-center text-muted py-5">
+          <i class="bi bi-file-earmark-text" style="font-size:3rem;"></i>
+          <p class="mt-3">No sections have been added to this content yet.</p>
+        </div>
+      {% endfor %}
+
+    </div>
+
+
+    <div class="col-lg-4">
+      <div class="sidebar-sticky">
+
+        {% if right_sections %}
+          <div class="card shadow-sm mb-3">
+            <div class="card-header bg-dark text-white fw-bold d-flex align-items-center gap-2">
+              <i class="bi bi-layout-sidebar-reverse"></i>
+              Expandable Content
+            </div>
+            <div class="card-body p-0">
+              <div class="accordion accordion-flush" id="sidebarAccordion">
+
+                {% for section in right_sections %}
+                  <div class="accordion-item">
+                    <h2 class="accordion-header">
+                      <button
+                        class="accordion-button fw-semibold {% if not section.is_open_by_default %}collapsed{% endif %}"
+                        type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#acc_{{ section.pk }}"
+                        aria-expanded="{{ section.is_open_by_default|yesno:'true,false' }}"
+                        aria-controls="acc_{{ section.pk }}"
+                      >
+                        {{ section.title }}
+                      </button>
+                    </h2>
+                    <div
+                      id="acc_{{ section.pk }}"
+                      class="accordion-collapse collapse {% if section.is_open_by_default %}show{% endif %}"
+                      data-bs-parent="#sidebarAccordion"
+                    >
+                      <div class="accordion-body small content-body">
+                        {{ section.body|safe }}
+                      </div>
+                    </div>
+                  </div>
+                {% endfor %}
+
+              </div>
+            </div>
+          </div>
+        {% endif %}
+
+        {% if related %}
+          <div class="card shadow-sm">
+            <div class="card-header fw-bold bg-secondary text-white d-flex align-items-center gap-2">
+              <i class="bi bi-grid"></i> Related Contents
+            </div>
+            <div class="card-body p-0">
+              <ul class="list-group list-group-flush">
+                {% for item in related %}
+                  <li class="list-group-item">
+                    <a href="{% url 'content:content-detail' slug=item.slug %}"
+                       class="text-decoration-none small d-flex align-items-center gap-2">
+                      <i class="bi bi-file-earmark-text text-primary"></i>
+                      {{ item.title }}
+                    </a>
+                  </li>
+                {% endfor %}
+              </ul>
+            </div>
+          </div>
+        {% endif %}
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<div class="modal fade" id="modalImage" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title d-flex align-items-center gap-2">
+          <i class="bi bi-image text-warning"></i>
+          <span class="modal-title-text">Image</span>
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body text-center">
+        <img src="" alt="" class="modal-img img-fluid rounded shadow-sm">
+      </div>
+      <div class="modal-footer">
+        <a href="#" class="btn btn-sm btn-outline-secondary modal-dl-link" download>
+          <i class="bi bi-download me-1"></i>Download
+        </a>
+        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="modalAudio" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title d-flex align-items-center gap-2">
+          <i class="bi bi-volume-up text-info"></i>
+          <span class="modal-title-text">Audio</span>
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body text-center py-4">
+        <div class="mb-3"><i class="bi bi-music-note-beamed text-info" style="font-size:3rem;"></i></div>
+        <audio controls class="w-100">
+          <source src="" type="audio/mpeg">
+          Your browser does not support audio playback.
+        </audio>
+      </div>
+      <div class="modal-footer">
+        <a href="#" class="btn btn-sm btn-outline-secondary modal-dl-link" download>
+          <i class="bi bi-download me-1"></i>Download
+        </a>
+        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="modalVideo" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title d-flex align-items-center gap-2">
+          <i class="bi bi-camera-video text-danger"></i>
+          <span class="modal-title-text">Video</span>
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-2">
+        <video controls class="w-100 rounded">
+          <source src="" type="video/mp4">
+        </video>
+      </div>
+      <div class="modal-footer">
+        <a href="#" class="btn btn-sm btn-outline-secondary modal-dl-link" download>
+          <i class="bi bi-download me-1"></i>Download
+        </a>
+        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="modalYoutube" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title d-flex align-items-center gap-2">
+          <i class="bi bi-youtube text-danger"></i>
+          <span class="modal-title-text">YouTube</span>
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-2">
+        <div class="ratio ratio-16x9">
+          <iframe src="" allowfullscreen class="rounded"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture">
+          </iframe>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="modalIframe" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title d-flex align-items-center gap-2">
+          <i class="bi bi-window text-info"></i>
+          <span class="modal-title-text">Embedded Content</span>
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-2">
+        <iframe src="" title="Embedded content"
+                style="width:100%;height:480px;border:none;border-radius:6px;"></iframe>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="modalText" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title d-flex align-items-center gap-2">
+          <i class="bi bi-card-text text-success"></i>
+          <span class="modal-title-text">Definition</span>
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-text-body"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<script>
+const CONTENT_ID = {{ content.pk }};
+
+const MODAL_MAP = {
+  image: 'modalImage',
+  audio: 'modalAudio',
+  video: 'modalVideo',
+  youtube: 'modalYoutube',
+  iframe: 'modalIframe',
+  text: 'modalText',
+};
+
+async function resolveTag(tagKey) {
+  const res = await fetch(`/api/inline-tags/?key=${encodeURIComponent(tagKey)}&content=${CONTENT_ID}`);
+  if (!res.ok) { console.error('Could not resolve inline tag:', tagKey); return; }
+  return await res.json();
+}
+
+function openModal(tag) {
+  const modalId = MODAL_MAP[tag.type];
+  if (!modalId) return;
+  const el = document.getElementById(modalId);
+  const bsM = new bootstrap.Modal(el);
+
+  const titleEl = el.querySelector('.modal-title-text');
+  if (titleEl) titleEl.textContent = tag.media?.title || tag.label || tag.type;
+
+  const mediaUrl = tag.media?.url || tag.url || '';
+
+  function toYouTubeEmbed(url) {
+    if (!url) return '';
+    const regExp = /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([^&?/]+)/;
+    const match = url.match(regExp);
+    return match ? `https://www.youtube.com/embed/${match[1]}` : url;
+  }
+
+  if (tag.type === 'image') {
+    el.querySelector('.modal-img').src = mediaUrl;
+    el.querySelector('.modal-img').alt = tag.media?.title || '';
+    el.querySelector('.modal-dl-link').href = mediaUrl;
+  } else if (tag.type === 'audio') {
+    const audio = el.querySelector('audio');
+    el.querySelector('.modal-dl-link').href = mediaUrl;
+    audio.querySelector('source').src = mediaUrl;
+    audio.load();
+    el.addEventListener('hidden.bs.modal', () => { audio.pause(); audio.currentTime = 0; }, { once: true });
+  } else if (tag.type === 'video') {
+    const video = el.querySelector('video');
+    el.querySelector('.modal-dl-link').href = mediaUrl;
+    video.querySelector('source').src = mediaUrl;
+    video.load();
+    el.addEventListener('hidden.bs.modal', () => { video.pause(); video.currentTime = 0; }, { once: true });
+  } else if (tag.type === 'youtube' || tag.type === 'iframe') {
+    const iframeSrc = tag.type === 'youtube' ? toYouTubeEmbed(mediaUrl) : mediaUrl;
+    el.querySelector('iframe').src = iframeSrc;
+    el.addEventListener('hidden.bs.modal', () => { el.querySelector('iframe').src = ''; }, { once: true });
+  } else if (tag.type === 'text') {
+    el.querySelector('.modal-text-body').innerHTML = tag.popup_body || '';
+    el.addEventListener('hidden.bs.modal', () => {
+      el.querySelector('.modal-text-body').innerHTML = '';
+    }, { once: true });
+  }
+
+  bsM.show();
+}
+
+document.querySelectorAll('.inline-tag').forEach(span => {
+  span.addEventListener('click', async function (e) {
+    e.preventDefault();
+
+    const directUrl = this.dataset.url;
+    const directType = this.dataset.type;
+    const directTitle = this.dataset.title || this.textContent.trim();
+
+    if (directUrl && directType) {
+      openModal({
+        type: directType,
+        label: directTitle,
+        media: {
+          title: directTitle,
+          url: directUrl,
+        },
+      });
+      return;
+    }
+
+    const key = this.dataset.key;
+    if (!key) return;
+    const tag = await resolveTag(key);
+    if (tag) openModal(tag);
+  });
+});
+</script>
+
+{% endblock content %}
