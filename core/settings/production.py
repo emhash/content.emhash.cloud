@@ -4,6 +4,7 @@ from .base import *
 
 DEBUG = os.getenv("DEBUG", "False").lower() in ("true", "1", "t")
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "").split(",")
+SECRET_KEY = os.getenv("SECRET_KEY", "INSECURE-DEFAULT-LOCAL")
 
 db_using = os.getenv("DB_USING", "postgres").lower()
 
@@ -145,21 +146,3 @@ if missing_vars:
 if len(os.getenv('SECRET_KEY', '')) < 50:
     raise ValueError("SECRET_KEY must be at least 50 characters long in production")
 
-
-# ------------------------------------------------------------------
-# Production-specific API responses are JSON only
-# ------------------------------------------------------------------
-try:
-    from .configurations.restapi import REST_FRAMEWORK as _REST_CONFIG
-    _rf = dict(_REST_CONFIG)
-    _rf['DEFAULT_RENDERER_CLASSES'] = [
-        'rest_framework.renderers.JSONRenderer',
-    ]
-    REST_FRAMEWORK = _rf
-except Exception:
-    # Fallback:
-    REST_FRAMEWORK = {
-        'DEFAULT_RENDERER_CLASSES': [
-            'rest_framework.renderers.JSONRenderer',
-        ]
-    }
