@@ -39,7 +39,7 @@ def home_view(request):
 
     return render(
         request,
-        "content/home.html",
+        "home/index.html",
         {
             "page_obj": page_obj,
             "categories": categories,
